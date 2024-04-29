@@ -3,52 +3,29 @@ defmodule Tracee do
   Provides functionality to trace and assert expected function calls within Elixir processes.
   """
 
-  import ExUnit.Assertions, only: [assert: 1]
+  import ExUnit.Assertions
 
-  @name {:global, __MODULE__}
+  def child_spec([]) do
+    %{id: __MODULE__, type: :worker, start: {__MODULE__, :start_link, []}}
+  end
 
   @doc """
   Starts the tracer.
   """
   def start_link do
-    case Agent.start_link(fn -> %{} end, name: @name) do
-      {:error, {:already_started, _}} ->
-        :ignore
-
-      server ->
-        :dbg.start()
-
-        :dbg.tracer(
-          :process,
-          {fn {:trace, pid, :call, {module, function, args}}, _state ->
-             test =
-               pid
-               |> :erlang.process_info()
-               |> get_in([:dictionary, :"$ancestors"])
-               |> case do
-                 list when is_list(list) -> List.last(list)
-                 _ -> pid
-               end
-
-             Agent.update(@name, fn state ->
-               state
-               |> update_in([test], fn
-                 nil -> %{expectations: %{}, traces: %{}}
-                 map -> map
-               end)
-               |> update_in([test, :traces, {module, function, length(args)}], fn
-                 nil -> 1
-                 count -> count + 1
-               end)
-             end)
-
-             send(test, {Tracee, :agent_updated})
-           end, nil}
-        )
-
+    case :dbg.tracer(:process, {&Tracee.Handler.trace/2, :unused}) do
+      {:ok, server} ->
         :dbg.p(:all, :c)
 
-        server
+        :dbg.tp(:erlang, :spawn, [{:_, [], [{:return_trace}]}])
+        :dbg.tp(:erlang, :spawn_link, [{:_, [], [{:return_trace}]}])
+        :dbg.tp(:erlang, :spawn_monitor, [{:_, [], [{:return_trace}]}])
+        :dbg.tp(:erlang, :spawn_opt, [{:_, [], [{:return_trace}]}])
+
+        {:ok, server}
+
+      {:error, :already_started} ->
+        {:error, :already_started}
     end
   end
 
@@ -56,17 +33,7 @@ defmodule Tracee do
   Sets an expectation for a function call with a specific arity and optional count.
   """
   def expect(module, function, arity, count \\ 1) do
-    test = self()
-
-    Agent.update(@name, fn state ->
-      state
-      |> update_in([test], fn
-        nil -> %{expectations: %{}, traces: %{}}
-        map -> map
-      end)
-      |> put_in([test, :expectations, {module, function, arity}], count)
-    end)
-
+    GenServer.cast(Tracee.Handler, {:expect, self(), {module, function, arity}, count})
     :dbg.tp(module, function, arity, [])
 
     :ok
@@ -80,25 +47,25 @@ defmodule Tracee do
 
     ExUnit.Callbacks.on_exit(Tracer, fn ->
       verify(test)
-      :dbg.stop()
     end)
   end
 
-  @doc false
-  def verify(pid) do
-    # Wait for the agent to be update to date.
-    receive do
-      {Tracee, :agent_updated} -> nil
-    after
-      10 -> nil
-    end
-
-    case Agent.get(@name, & &1) do
-      %{^pid => %{expectations: expectations, traces: traces}} when map_size(expectations) > 0 ->
-        assert expectations == traces
-
-      _ ->
+  @doc """
+  Verifies that all expected function calls have been received and nothing else.
+  """
+  def verify(test \\ self()) do
+    case GenServer.call(Tracee.Handler, {:verify, test, self()}) do
+      [] ->
         nil
+
+      expectations ->
+        for {^test, expectation} <- expectations do
+          assert_receive {Tracee, ^test, ^expectation}
+        end
+
+        refute_received {Tracee, _, _}
+
+        GenServer.cast(Tracee.Handler, {:remove, test})
     end
   end
 end
