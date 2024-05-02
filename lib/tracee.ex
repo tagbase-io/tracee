@@ -50,8 +50,17 @@ defmodule Tracee do
     end)
   end
 
-  @assert_receive_timeout Application.compile_env!(:ex_unit, :assert_receive_timeout)
-  @refute_receive_timeout Application.compile_env!(:ex_unit, :refute_receive_timeout)
+  @assert_receive_timeout Application.compile_env(
+                            :tracee,
+                            :assert_receive_timeout,
+                            Application.compile_env!(:ex_unit, :assert_receive_timeout)
+                          )
+
+  @refute_receive_timeout Application.compile_env(
+                            :tracee,
+                            :refute_receive_timeout,
+                            Application.compile_env!(:ex_unit, :refute_receive_timeout)
+                          )
 
   @doc """
   Verifies that all expected function calls have been received and nothing else.
