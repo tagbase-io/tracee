@@ -50,6 +50,9 @@ defmodule Tracee do
     end)
   end
 
+  @assert_receive_timeout Application.compile_env!(:ex_unit, :assert_receive_timeout)
+  @refute_receive_timeout Application.compile_env!(:ex_unit, :refute_receive_timeout)
+
   @doc """
   Verifies that all expected function calls have been received and nothing else.
   """
@@ -59,14 +62,21 @@ defmodule Tracee do
         nil
 
       expectations ->
-        for {^test, expectation} <- expectations do
-          message = {Tracee, test, expectation}
-          assert_receive ^message
+        for {_, mfa} <- expectations do
+          assert_receive {Tracee, ^test, ^mfa},
+                         @assert_receive_timeout,
+                         "Expected #{format_mfa(mfa)} to be called in #{inspect(test)}"
         end
 
-        refute_receive {Tracee, _, _}
+        refute_receive {Tracee, _, mfa},
+                       @refute_receive_timeout,
+                       "No (more) expectations defined for #{format_mfa(mfa)} in #{inspect(test)}"
 
         GenServer.cast(Tracee.Handler, {:remove, test})
     end
+  end
+
+  defp format_mfa({module, function, arity}) do
+    "#{inspect(module)}.#{function}/#{arity}"
   end
 end
