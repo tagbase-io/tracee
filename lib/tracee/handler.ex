@@ -50,12 +50,8 @@ defmodule Tracee.Handler do
 
   @impl true
   def handle_cast({:spawn, parent, child}, state) do
-    if parent in get_in(state, [:expectations, Access.all(), Access.elem(0)]) do
-      state = put_in(state, [:ancestors, Access.key(child)], parent)
-      {:noreply, state}
-    else
-      {:noreply, state}
-    end
+    state = put_in(state, [:ancestors, Access.key(child)], parent)
+    {:noreply, state}
   end
 
   @impl true
@@ -90,15 +86,11 @@ defmodule Tracee.Handler do
         {:noreply, state}
 
       receiver ->
+        # Find all traces that were called in the test process or any child process.
         {traces, state} =
-          state
-          |> update_in([:traces, Access.all(), Access.elem(0)], &find_ancestor(state.ancestors, &1))
-          |> get_and_update_in([:traces, Access.all()], fn
-            {^test, _mfa} -> :pop
-            {test, mfa} -> {{test, mfa}, {test, mfa}}
-          end)
+          pop_in(state, [:traces, Access.filter(&match?(^test, find_ancestor(state.ancestors, elem(&1, 0), test)))])
 
-        for {^test, mfa} <- traces do
+        for {_, mfa} <- traces do
           send(receiver, {Tracee, test, mfa})
         end
 
@@ -106,9 +98,11 @@ defmodule Tracee.Handler do
     end
   end
 
-  defp find_ancestor(map, pid) when is_map_key(map, pid) do
-    find_ancestor(map, map[pid])
+  defp find_ancestor(_map, pid, ancestor) when pid == ancestor, do: ancestor
+
+  defp find_ancestor(map, pid, ancestor) when is_map_key(map, pid) do
+    find_ancestor(map, map[pid], ancestor)
   end
 
-  defp find_ancestor(_map, pid), do: pid
+  defp find_ancestor(_map, pid, _ancestor), do: pid
 end

@@ -60,10 +60,11 @@ defmodule Tracee do
 
       expectations ->
         for {^test, expectation} <- expectations do
-          assert_receive {Tracee, ^test, ^expectation}
+          message = {Tracee, test, expectation}
+          assert_receive ^message
         end
 
-        refute_received {Tracee, _, _}
+        refute_receive {Tracee, _, _}
 
         GenServer.cast(Tracee.Handler, {:remove, test})
     end
