@@ -71,11 +71,13 @@ defmodule Tracee do
 
   ## Examples
 
-      # expect AnotherModule.expensive_fun/0 to be called once
-      Tracee.expect(AnotherModule, :expensive_fun, 0)
+  - Expect `AnotherModule.expensive_fun/0` to be called once:
 
-      # expect AnotherModule.expensive_fun/1 to be called twice
-      Tracee.expect(AnotherModule, :expensive_fun, 1, 2)
+        Tracee.expect(AnotherModule, :expensive_fun, 0)
+
+  - Expect `AnotherModule.expensive_fun/1` to be called twice:
+
+        Tracee.expect(AnotherModule, :expensive_fun, 1, 2)
 
   """
   @spec expect(module(), atom(), pos_integer(), pos_integer()) :: :ok
