@@ -1,17 +1,27 @@
 defmodule Tracee.MixProject do
   use Mix.Project
 
+  @version "0.1.0"
+
   def project do
     [
       app: :tracee,
-      version: "0.1.0",
+      version: @version,
       elixir: "~> 1.16",
       deps: deps(),
+      name: "Tracee",
+      description: "Trace function calls in concurrent Elixir processes.",
+
+      # Package
+      package: %{
+        licenses: ["MIT"],
+        maintainers: ["Mario Uher"],
+        links: %{"GitHub" => "https://github.com/tagbase-io/tracee"}
+      },
 
       # Docs
-      name: "Tracee",
-      source_url: "https://github.com/tagbase-io/tracee",
       docs: [
+        source_url: "https://github.com/tagbase-io/tracee",
         main: "Tracee"
       ]
     ]
