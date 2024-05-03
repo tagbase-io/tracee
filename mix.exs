@@ -6,7 +6,14 @@ defmodule Tracee.MixProject do
       app: :tracee,
       version: "0.1.0",
       elixir: "~> 1.16",
-      deps: deps()
+      deps: deps(),
+
+      # Docs
+      name: "Tracee",
+      source_url: "https://github.com/tagbase-io/tracee",
+      docs: [
+        main: "Tracee"
+      ]
     ]
   end
 
@@ -21,8 +28,9 @@ defmodule Tracee.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
-      {:markdown_formatter, "~> 0.6", only: :dev, runtime: false},
-      {:styler, "~> 0.11.9", only: [:dev, :test]}
+      {:ex_doc, "~> 0.32.1", only: [:dev, :test]},
+      {:markdown_formatter, "~> 0.6", only: [:dev, :test], runtime: false},
+      {:styler, "~> 0.11.9", only: [:dev, :test], runtime: false}
     ]
   end
 end

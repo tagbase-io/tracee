@@ -83,7 +83,10 @@ defmodule Tracee.Handler do
       receiver ->
         # Find all traces called during the test process or any child processes.
         {traces, state} =
-          pop_in(state, [:traces, Access.filter(&match?(^test, find_ancestor(state.ancestors, elem(&1, 0), test)))])
+          pop_in(state, [
+            :traces,
+            Access.filter(&match?(^test, find_ancestor(state.ancestors, elem(&1, 0), test)))
+          ])
 
         for {_, mfa} <- traces do
           send(receiver, {Tracee, test, mfa})
