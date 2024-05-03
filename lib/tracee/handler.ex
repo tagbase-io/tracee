@@ -56,18 +56,13 @@ defmodule Tracee.Handler do
 
   @impl true
   def handle_cast({:remove, test}, state) do
-    {_, state} =
-      get_and_update_in(state, [:expectations, Access.all()], fn
-        {^test, _} -> :pop
-        {test, mfa} -> {{test, mfa}, {test, mfa}}
-      end)
-
+    {_, state} = pop_in(state, [:expectations, Access.filter(&match?(^test, elem(&1, 0)))])
     {:noreply, state}
   end
 
   @impl true
   def handle_call({:verify, test, receiver}, _from, state) do
-    expectations = Enum.filter(state.expectations, &(elem(&1, 0) == test))
+    expectations = get_in(state, [:expectations, Access.filter(&match?(^test, elem(&1, 0)))])
     state = put_in(state, [:receivers, Access.key(test)], receiver)
 
     {:reply, expectations, state, {:continue, {:flush, test}}}
@@ -86,7 +81,7 @@ defmodule Tracee.Handler do
         {:noreply, state}
 
       receiver ->
-        # Find all traces that were called in the test process or any child process.
+        # Find all traces called during the test process or any child processes.
         {traces, state} =
           pop_in(state, [:traces, Access.filter(&match?(^test, find_ancestor(state.ancestors, elem(&1, 0), test)))])
 

@@ -1,9 +1,11 @@
 defmodule Tracee do
   @moduledoc """
-  Provides functionality to trace and assert expected function calls within Elixir processes.
+  This Elixir library offers functionality to trace and assert expected function calls within concurrent Elixir processes.
   """
 
   import ExUnit.Assertions
+
+  alias Tracee.Handler
 
   def child_spec([]) do
     %{id: __MODULE__, type: :worker, start: {__MODULE__, :start_link, []}}
@@ -13,7 +15,7 @@ defmodule Tracee do
   Starts the tracer.
   """
   def start_link do
-    case :dbg.tracer(:process, {&Tracee.Handler.trace/2, :unused}) do
+    case :dbg.tracer(:process, {&Handler.trace/2, :unused}) do
       {:ok, server} ->
         :dbg.p(:all, :c)
 
@@ -30,22 +32,24 @@ defmodule Tracee do
   end
 
   @doc """
-  Sets an expectation for a function call with a specific arity and optional count.
+  Sets an expectation for a function call with a specific arity and optional
+  count.
   """
   def expect(module, function, arity, count \\ 1) do
-    GenServer.cast(Tracee.Handler, {:expect, self(), {module, function, arity}, count})
+    GenServer.cast(Handler, {:expect, self(), {module, function, arity}, count})
     :dbg.tp(module, function, arity, [])
 
     :ok
   end
 
   @doc """
-  Registers a verification check to be performed when the current test process exits.
+  Registers a verification check to be performed when the current test process
+  exits.
   """
   def verify_on_exit!(_context \\ %{}) do
     test = self()
 
-    ExUnit.Callbacks.on_exit(Tracer, fn ->
+    ExUnit.Callbacks.on_exit(Tracee, fn ->
       verify(test)
     end)
   end
@@ -66,7 +70,7 @@ defmodule Tracee do
   Verifies that all expected function calls have been received and nothing else.
   """
   def verify(test \\ self()) do
-    case GenServer.call(Tracee.Handler, {:verify, test, self()}) do
+    case GenServer.call(Handler, {:verify, test, self()}) do
       [] ->
         nil
 
@@ -81,7 +85,7 @@ defmodule Tracee do
                        @refute_receive_timeout,
                        "No (more) expectations defined for #{format_mfa(mfa)} in #{inspect(test)}"
 
-        GenServer.cast(Tracee.Handler, {:remove, test})
+        GenServer.cast(Handler, {:remove, test})
     end
   end
 
