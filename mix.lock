@@ -1,3 +1,5 @@
 %{
+  "earmark_parser": {:hex, :earmark_parser, "1.4.39", "424642f8335b05bb9eb611aa1564c148a8ee35c9c8a8bba6e129d51a3e3c6769", [:mix], [], "hexpm", "06553a88d1f1846da9ef066b87b57c6f605552cfbe40d20bd8d59cc6bde41944"},
+  "markdown_formatter": {:hex, :markdown_formatter, "0.6.0", "bc822cf262f74a70dd6c76d76407b94cd19e59ee6b83248c728d00f7e75f2bd4", [:mix], [{:earmark_parser, "~> 1.4", [hex: :earmark_parser, repo: "hexpm", optional: false]}], "hexpm", "8181c6c1516061de482e24fa69e287878bab88249dae4ca489d89e914040da90"},
   "styler": {:hex, :styler, "0.11.9", "2595393b94e660cd6e8b582876337cc50ff047d184ccbed42fdad2bfd5d78af5", [:mix], [], "hexpm", "8b7806ba1fdc94d0a75127c56875f91db89b75117fcc67572661010c13e1f259"},
 }

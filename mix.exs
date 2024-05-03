@@ -21,6 +21,7 @@ defmodule Tracee.MixProject do
   # Run "mix help deps" to learn about dependencies.
   defp deps do
     [
+      {:markdown_formatter, "~> 0.6", only: :dev, runtime: false},
       {:styler, "~> 0.11.9", only: [:dev, :test]}
     ]
   end
