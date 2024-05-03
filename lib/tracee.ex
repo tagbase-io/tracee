@@ -35,7 +35,7 @@ defmodule Tracee do
   Sets an expectation for a function call with a specific arity and optional
   count.
   """
-  def expect(module, function, arity, count \\ 1) do
+  def expect(module, function, arity, count \\ 1) when is_integer(count) and count > 0 do
     GenServer.cast(Handler, {:expect, self(), {module, function, arity}, count})
     :dbg.tp(module, function, arity, [])
 
