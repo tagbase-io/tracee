@@ -26,7 +26,6 @@ end
 ## Usage
 
 ```elixir
-# test/module_test.exs
 defmodule ModuleTest do
   use ExUnit.Case
 
