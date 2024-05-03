@@ -1,6 +1,7 @@
 # Tracee
 
 [![Hex.pm](https://img.shields.io/hexpm/v/tracee.svg?style=flat-square)](https://hex.pm/packages/tracee)
+![CI Status](https://img.shields.io/github/actions/workflow/status/tagbase-io/tracee/test.yml?branch=main&style=flat-square)
 
 This Elixir library offers functionality to trace and assert expected function
 calls within concurrent Elixir processes.
