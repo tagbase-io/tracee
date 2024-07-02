@@ -79,9 +79,13 @@ defmodule Tracee do
 
         Tracee.expect(AnotherModule, :expensive_fun, 1, 2)
 
+  - Expect `AnotherModule.expensive_fun/1` to be nerver called:
+
+        Tracee.expect(AnotherModule, :expensive_fun, 1, 0)
+
   """
-  @spec expect(module(), atom(), pos_integer(), pos_integer()) :: :ok
-  def expect(module, function, arity, count \\ 1) when is_integer(count) and count > 0 do
+  @spec expect(module(), atom(), pos_integer(), non_neg_integer()) :: :ok
+  def expect(module, function, arity, count \\ 1) when is_integer(count) and count >= 0 do
     GenServer.cast(Handler, {:expect, self(), {module, function, arity}, count})
     :dbg.tp(module, function, arity, [])
 
@@ -133,13 +137,19 @@ defmodule Tracee do
         nil
 
       expectations ->
-        for {_, mfa, count} <- expectations do
-          for _ <- 1..count do
-            assert_receive {Tracee, ^test, ^mfa},
-                           @assert_receive_timeout,
-                           "Expected #{format_mfa(mfa)} to be called in #{inspect(test)}"
-          end
-        end
+        Enum.each(expectations, fn
+          {_, mfa, 0} ->
+            refute_receive {Tracee, ^test, ^mfa},
+                           @refute_receive_timeout,
+                           "Expected #{format_mfa(mfa)} NOT to be called in #{inspect(test)}"
+
+          {_, mfa, count} ->
+            for _ <- 1..count do
+              assert_receive {Tracee, ^test, ^mfa},
+                             @assert_receive_timeout,
+                             "Expected #{format_mfa(mfa)} to be called in #{inspect(test)}"
+            end
+        end)
 
         refute_receive {Tracee, _, mfa},
                        @refute_receive_timeout,

@@ -30,6 +30,11 @@ defmodule TraceeTest do
       TestModule.fun(:ok)
     end
 
+    test "ensures function is not called" do
+      expect(TestModule, :fun, 0, 0)
+      expect(TestModule, :fun, 1, 0)
+    end
+
     test "ensures function is called once from another task" do
       expect(TestModule, :fun, 0)
 
@@ -56,11 +61,21 @@ defmodule TraceeTest do
   end
 
   describe "verify/1" do
-    test "raises when function is not called" do
+    test "raises when function is not called when expected" do
       test = self()
       expect(TestModule, :fun, 0)
 
       assert_raise ExUnit.AssertionError, fn ->
+        verify(test)
+      end
+    end
+
+    test "raises when function is called when not expected" do
+      test = self()
+      expect(TestModule, :fun, 0, 0)
+
+      assert_raise ExUnit.AssertionError, fn ->
+        TestModule.fun()
         verify(test)
       end
     end

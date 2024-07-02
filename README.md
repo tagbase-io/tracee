@@ -47,6 +47,12 @@ defmodule ModuleTest do
              |> Task.async()
              |> Task.await()
     end
+
+    test "never calls expensive function" do
+      expect(AnotherModule, :expensive_fun, 1, 0)
+
+      assert Module.fun()
+    end
   end
 end
 ```
