@@ -18,7 +18,7 @@ Just add `tracee` to your list of dependencies in `mix.exs`:
 ```elixir
 def deps do
   [
-    {:tracee, "~> 0.1", only: :test}
+    {:tracee, "~> 0.2.0", only: :test}
   ]
 end
 ```
