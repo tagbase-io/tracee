@@ -133,10 +133,12 @@ defmodule Tracee do
         nil
 
       expectations ->
-        for {_, mfa} <- expectations do
-          assert_receive {Tracee, ^test, ^mfa},
-                         @assert_receive_timeout,
-                         "Expected #{format_mfa(mfa)} to be called in #{inspect(test)}"
+        for {_, mfa, count} <- expectations do
+          for _ <- 1..count do
+            assert_receive {Tracee, ^test, ^mfa},
+                           @assert_receive_timeout,
+                           "Expected #{format_mfa(mfa)} to be called in #{inspect(test)}"
+          end
         end
 
         refute_receive {Tracee, _, mfa},

@@ -38,7 +38,7 @@ defmodule Tracee.Handler do
 
   @impl true
   def handle_cast({:expect, test, mfa, count}, state) do
-    state = update_in(state, [:expectations], &(&1 ++ List.duplicate({test, mfa}, count)))
+    state = update_in(state, [:expectations], &(&1 ++ [{test, mfa, count}]))
     {:noreply, state}
   end
 
