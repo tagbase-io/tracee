@@ -115,17 +115,21 @@ defmodule Tracee do
     end)
   end
 
-  @assert_receive_timeout Application.compile_env(
-                            :tracee,
-                            :assert_receive_timeout,
-                            Application.compile_env!(:ex_unit, :assert_receive_timeout)
-                          )
+  defp assert_receive_timeout do
+    Application.get_env(
+      :tracee,
+      :assert_receive_timeout,
+      Application.get_env(:ex_unit, :assert_receive_timeout, 100)
+    )
+  end
 
-  @refute_receive_timeout Application.compile_env(
-                            :tracee,
-                            :refute_receive_timeout,
-                            Application.compile_env!(:ex_unit, :refute_receive_timeout)
-                          )
+  defp refute_receive_timeout do
+    Application.get_env(
+      :tracee,
+      :refute_receive_timeout,
+      Application.get_env(:ex_unit, :refute_receive_timeout, 100)
+    )
+  end
 
   @doc """
   Verifies that all expected function calls have been received and nothing else.
@@ -140,19 +144,19 @@ defmodule Tracee do
         Enum.each(expectations, fn
           {_, mfa, 0} ->
             refute_receive {Tracee, ^test, ^mfa},
-                           @refute_receive_timeout,
+                           refute_receive_timeout(),
                            "Expected #{format_mfa(mfa)} NOT to be called in #{inspect(test)}"
 
           {_, mfa, count} ->
             for _ <- 1..count do
               assert_receive {Tracee, ^test, ^mfa},
-                             @assert_receive_timeout,
+                             assert_receive_timeout(),
                              "Expected #{format_mfa(mfa)} to be called in #{inspect(test)}"
             end
         end)
 
         refute_receive {Tracee, _, mfa},
-                       @refute_receive_timeout,
+                       refute_receive_timeout(),
                        "No (more) expectations defined for #{format_mfa(mfa)} in #{inspect(test)}"
 
         GenServer.cast(Handler, {:remove, test})
