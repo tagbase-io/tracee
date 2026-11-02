@@ -17,12 +17,7 @@ defmodule Tracee.Handler do
     unused
   end
 
-  def trace({:trace, parent, :return_from, {:erlang, _, _}, {child, _ref}}, unused) do
-    GenServer.cast(__MODULE__, {:spawn, parent, child})
-    unused
-  end
-
-  def trace({:trace, parent, :return_from, {:erlang, _, _}, child}, unused) do
+  def trace({:trace, parent, :spawn, child, _mfa}, unused) do
     GenServer.cast(__MODULE__, {:spawn, parent, child})
     unused
   end

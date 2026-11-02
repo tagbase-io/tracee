@@ -107,4 +107,12 @@ defmodule TraceeTest do
       verify(self())
     end
   end
+
+  test "leaves timers cancellable after a spawned process replies" do
+    %Task{ref: ref} = Task.async(fn -> :ok end)
+    timer = Process.send_after(self(), :timeout, 5000)
+
+    assert_receive {^ref, :ok}
+    assert is_integer(Process.cancel_timer(timer))
+  end
 end

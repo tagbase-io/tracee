@@ -51,12 +51,9 @@ defmodule Tracee do
   def start_link do
     case :dbg.tracer(:process, {&Handler.trace/2, :unused}) do
       {:ok, server} ->
-        :dbg.p(:all, :c)
-
-        :dbg.tp(:erlang, :spawn, [{:_, [], [{:return_trace}]}])
-        :dbg.tp(:erlang, :spawn_link, [{:_, [], [{:return_trace}]}])
-        :dbg.tp(:erlang, :spawn_monitor, [{:_, [], [{:return_trace}]}])
-        :dbg.tp(:erlang, :spawn_opt, [{:_, [], [{:return_trace}]}])
+        # Spawn events come from the `:procs` flag. Call tracing the spawn BIFs
+        # breaks `cancel_timer/1` in the calling process on OTP 29.
+        :dbg.p(:all, [:c, :procs])
 
         {:ok, server}
 
