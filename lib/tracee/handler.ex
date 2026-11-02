@@ -40,7 +40,7 @@ defmodule Tracee.Handler do
   @impl true
   def handle_cast({:trace, pid, mfa}, state) do
     state = update_in(state, [:traces], &(&1 ++ [{pid, mfa}]))
-    {:noreply, state}
+    {:noreply, flush(state, find_ancestor(state.ancestors, pid))}
   end
 
   @impl true
@@ -51,51 +51,43 @@ defmodule Tracee.Handler do
 
   @impl true
   def handle_cast({:remove, test}, state) do
-    {_, state} = pop_in(state, [:expectations, Access.filter(&match?(^test, elem(&1, 0)))])
-    {:noreply, state}
+    expectations = Enum.reject(state.expectations, &match?({^test, _, _}, &1))
+    ancestors = Map.reject(state.ancestors, fn {pid, _} -> find_ancestor(state.ancestors, pid) == test end)
+    receivers = Map.delete(state.receivers, test)
+
+    {:noreply, %{state | expectations: expectations, ancestors: ancestors, receivers: receivers}}
   end
 
   @impl true
   def handle_call({:verify, test, receiver}, _from, state) do
-    expectations = get_in(state, [:expectations, Access.filter(&match?(^test, elem(&1, 0)))])
-    state = put_in(state, [:receivers, Access.key(test)], receiver)
+    case Enum.filter(state.expectations, &match?({^test, _, _}, &1)) do
+      [] ->
+        {:reply, [], state}
 
-    {:reply, expectations, state, {:continue, {:flush, test}}}
+      expectations ->
+        state = put_in(state, [:receivers, Access.key(test)], receiver)
+        {:reply, expectations, flush(state, test)}
+    end
   end
 
-  @impl true
-  def handle_continue({:flush, test}, state) do
-    send(self(), {:flush, test})
-    {:noreply, state}
-  end
-
-  @impl true
-  def handle_info({:flush, test}, state) do
-    case get_in(state, [:receivers, Access.key(test)]) do
-      nil ->
-        {:noreply, state}
-
-      receiver ->
-        # Find all traces called during the test process or any child processes.
-        {traces, state} =
-          pop_in(state, [
-            :traces,
-            Access.filter(&match?(^test, find_ancestor(state.ancestors, elem(&1, 0), test)))
-          ])
+  # Forwards the test's traces to its receiver once `verify/1` registered one.
+  # Traces that arrive later are forwarded by the `:trace` cast as they come.
+  defp flush(state, test) do
+    case state.receivers do
+      %{^test => receiver} ->
+        {traces, rest} = Enum.split_with(state.traces, fn {pid, _} -> find_ancestor(state.ancestors, pid) == test end)
 
         for {_, mfa} <- traces do
           send(receiver, {Tracee, test, mfa})
         end
 
-        {:noreply, state, {:continue, {:flush, test}}}
+        %{state | traces: rest}
+
+      _ ->
+        state
     end
   end
 
-  defp find_ancestor(_map, pid, ancestor) when pid == ancestor, do: ancestor
-
-  defp find_ancestor(map, pid, ancestor) when is_map_key(map, pid) do
-    find_ancestor(map, map[pid], ancestor)
-  end
-
-  defp find_ancestor(_map, pid, _ancestor), do: pid
+  defp find_ancestor(map, pid) when is_map_key(map, pid), do: find_ancestor(map, map[pid])
+  defp find_ancestor(_map, pid), do: pid
 end

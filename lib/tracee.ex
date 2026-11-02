@@ -51,10 +51,6 @@ defmodule Tracee do
   def start_link do
     case :dbg.tracer(:process, {&Handler.trace/2, :unused}) do
       {:ok, server} ->
-        # Spawn events come from the `:procs` flag. Call tracing the spawn BIFs
-        # breaks `cancel_timer/1` in the calling process on OTP 29.
-        :dbg.p(:all, [:c, :procs])
-
         {:ok, server}
 
       {:error, :already_started} ->
@@ -84,6 +80,10 @@ defmodule Tracee do
   @spec expect(module(), atom(), pos_integer(), non_neg_integer()) :: :ok
   def expect(module, function, arity, count \\ 1) when is_integer(count) and count >= 0 do
     GenServer.cast(Handler, {:expect, self(), {module, function, arity}, count})
+    # Only the test process and what it spawns from here on are traced, so tests
+    # without expectations cost nothing. Spawn events come from the `:procs`
+    # flag: call tracing the spawn BIFs breaks `cancel_timer/1` on OTP 29.
+    :dbg.p(self(), [:c, :procs, :sos])
     :dbg.tp(module, function, arity, [])
 
     :ok

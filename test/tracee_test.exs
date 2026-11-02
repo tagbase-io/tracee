@@ -115,4 +115,34 @@ defmodule TraceeTest do
     assert_receive {^ref, :ok}
     assert is_integer(Process.cancel_timer(timer))
   end
+
+  test "stays idle once a test is verified" do
+    test = self()
+    expect(TestModule, :fun, 0)
+    TestModule.fun()
+    verify(test)
+    verify(test)
+
+    handler = Process.whereis(Tracee.Handler)
+    {:reductions, before} = Process.info(handler, :reductions)
+    Process.sleep(50)
+    {:reductions, later} = Process.info(handler, :reductions)
+
+    assert later - before < 1000
+  end
+
+  test "ignores processes of tests without expectations" do
+    handler = Process.whereis(Tracee.Handler)
+    :sys.get_state(handler)
+    {:reductions, before} = Process.info(handler, :reductions)
+
+    1..1000
+    |> Enum.map(fn _ -> Task.async(fn -> TestModule.fun() end) end)
+    |> Task.await_many()
+
+    :sys.get_state(handler)
+    {:reductions, later} = Process.info(handler, :reductions)
+
+    assert later - before < 1000
+  end
 end
